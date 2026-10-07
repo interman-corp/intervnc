@@ -16,6 +16,27 @@ of Tight encoding that is greatly accelerated by the use of the libjpeg-turbo
 JPEG codec.
 
 
+Windows file transfer in this fork
+=================================
+
+The Windows viewer's context menu includes **File transfer (WinSCP)...**.
+Install WinSCP separately and enable SSH/SFTP on the remote computer. The
+viewer opens a separate WinSCP session using the VNC host name and an
+independent SSH port and user name. Drag files in either direction between
+WinSCP's local and remote panels. Dropping files directly on the VNC desktop
+is not supported.
+
+See `Windows/Mac sharing notes <doc/windows-mac-sharing.md>`_ for setup,
+clipboard compatibility findings, and acceptance checks (Japanese).
+
+For text clipboard sharing with macOS's built-in Screen Sharing server, use
+**Mac clipboard (SSH)...** from the Windows viewer's context menu. This opt-in
+bridge requires Windows OpenSSH Client, working key authentication, a verified
+SSH host key, and the same Mac user as the active desktop. It supports Unicode
+text up to 1 MiB; no additional software is installed on the Mac. SSH clipboard
+traffic is separate from the VNC connection and from WinSCP file transfer.
+
+
 Legal
 =====
 

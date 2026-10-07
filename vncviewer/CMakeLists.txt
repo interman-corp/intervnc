@@ -39,6 +39,11 @@ if(WIN32)
 endif()
 
 if(WIN32)
+  target_sources(vncviewer PRIVATE FileTransferWin32.cxx FileTransferCommand.cxx)
+  target_sources(vncviewer PRIVATE MacClipboardWin32.cxx MacClipboardProtocol.cxx
+    ClipboardSshWin32.cxx)
+  find_package(Threads REQUIRED)
+  target_link_libraries(vncviewer Threads::Threads)
   target_sources(vncviewer PRIVATE Win32TouchHandler.cxx win32.c)
   target_sources(vncviewer PRIVATE KeyboardWin32.cxx keysym2ucs.c)
   target_sources(vncviewer PRIVATE Surface_Win32.cxx)

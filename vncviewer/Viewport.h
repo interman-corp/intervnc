@@ -35,6 +35,9 @@ class CConn;
 class Keyboard;
 class PlatformPixelBuffer;
 class Surface;
+#ifdef WIN32
+class MacClipboardWin32;
+#endif
 
 class Viewport : public Fl_Widget, protected EmulateMB,
                  protected KeyboardHandler {
@@ -124,6 +127,9 @@ private:
   bool pendingClientClipboard;
 
   int clipboardSource;
+#ifdef WIN32
+  MacClipboardWin32* macClipboard;
+#endif
 
   Fl_Menu_Button *contextMenu;
 

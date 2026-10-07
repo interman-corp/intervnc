@@ -13,3 +13,9 @@ config.h
 cmake_install.cmake
 cmake_uninstall.cmake
 install_manifest.txt
+
+# Local test distributions
+/dist/
+
+# Mac
+.DS_Store

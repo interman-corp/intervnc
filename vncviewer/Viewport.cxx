@@ -66,6 +66,8 @@
 #include <FL/x.H>
 
 #if defined(WIN32)
+#include "FileTransferWin32.h"
+#include "MacClipboardWin32.h"
 #include "KeyboardWin32.h"
 #elif defined(__APPLE__)
 #include "KeyboardMacOS.h"
@@ -83,7 +85,8 @@ static core::LogWriter vlog("Viewport");
 
 enum { ID_DISCONNECT, ID_FULLSCREEN, ID_MINIMIZE, ID_RESIZE,
        ID_CTRL, ID_ALT, ID_CTRLALTDEL,
-       ID_REFRESH, ID_OPTIONS, ID_INFO, ID_ABOUT };
+       ID_REFRESH, ID_OPTIONS, ID_INFO, ID_ABOUT, ID_FILE_TRANSFER,
+       ID_MAC_CLIPBOARD };
 
 // Used for fake key presses from the menu
 static const int FAKE_CTRL_KEY_CODE = 0x10001;
@@ -103,6 +106,9 @@ Viewport::Viewport(int w, int h, CConn* cc_)
 {
 #if defined(WIN32)
   keyboard = new KeyboardWin32(this);
+  macClipboard = new MacClipboardWin32(
+    [this]() { return hasFocus() && GetForegroundWindow() == fl_xid(window()); },
+    [this]() { return fl_xid(window()); });
 #elif defined(__APPLE__)
   keyboard = new KeyboardMacOS(this);
 #else
@@ -150,6 +156,9 @@ Viewport::Viewport(int w, int h, CConn* cc_)
 
 Viewport::~Viewport()
 {
+#ifdef WIN32
+  delete macClipboard;
+#endif
   // Unregister all timeouts in case they get a change tro trigger
   // again later when this object is already gone.
   Fl::remove_timeout(handlePointerTimeout, this);
@@ -268,6 +277,9 @@ void Viewport::showCursor()
 
 void Viewport::handleClipboardRequest()
 {
+#ifdef WIN32
+  if (macClipboard->enabled()) return;
+#endif
   if (viewOnly)
     return;
 
@@ -276,6 +288,9 @@ void Viewport::handleClipboardRequest()
 
 void Viewport::handleClipboardAnnounce(bool available)
 {
+#ifdef WIN32
+  if (macClipboard->enabled()) return;
+#endif
   if (viewOnly)
     return;
 
@@ -300,6 +315,9 @@ void Viewport::handleClipboardAnnounce(bool available)
 
 void Viewport::handleClipboardData(const char* data)
 {
+#ifdef WIN32
+  if (macClipboard->enabled()) return;
+#endif
   size_t len;
 
   if (!hasFocus())
@@ -431,6 +449,9 @@ int Viewport::handle(int event)
 
   switch (event) {
   case FL_PASTE:
+#ifdef WIN32
+    if (macClipboard->enabled()) return 1;
+#endif
     if (!core::isValidUTF8(Fl::event_text(), Fl::event_length())) {
       vlog.error(_("Invalid UTF-8 sequence in clipboard"));
       // Reset the state as if we don't have any clipboard data at all
@@ -583,6 +604,9 @@ void Viewport::handleClipboardChange(int source, void *data)
   Viewport *self = (Viewport *)data;
 
   assert(self);
+#ifdef WIN32
+  if (self->macClipboard->enabled()) return;
+#endif
 
   if (viewOnly)
     return;
@@ -637,6 +661,12 @@ void Viewport::handleClipboardChange(int source, void *data)
 
 void Viewport::flushPendingClipboard()
 {
+#ifdef WIN32
+  if (macClipboard->enabled()) {
+    pendingClientClipboard = false;
+    return;
+  }
+#endif
   if (pendingClientClipboard) {
     if (clipboardSource != 0 &&
         !Fl::clipboard_contains(Fl::clipboard_plain_text)) {
@@ -964,6 +994,12 @@ void Viewport::initContextMenu()
 
   fltk_menu_add(contextMenu, C_("ContextMenu|", "&Options..."),
                 0, nullptr, (void*)ID_OPTIONS, 0);
+#ifdef WIN32
+  fltk_menu_add(contextMenu, C_("ContextMenu|", "File &transfer (WinSCP)..."),
+                0, nullptr, (void*)ID_FILE_TRANSFER, 0);
+  fltk_menu_add(contextMenu, C_("ContextMenu|", "Mac clipboard (SSH)..."),
+                0, nullptr, (void*)ID_MAC_CLIPBOARD, 0);
+#endif
   fltk_menu_add(contextMenu, C_("ContextMenu|", "Connection &info..."),
                 0, nullptr, (void*)ID_INFO, 0);
   fltk_menu_add(contextMenu, C_("ContextMenu|", "About &TigerVNC..."),
@@ -1054,6 +1090,15 @@ void Viewport::popupContextMenu()
   case ID_OPTIONS:
     OptionsDialog::showDialog();
     break;
+#ifdef WIN32
+  case ID_FILE_TRANSFER:
+    showFileTransfer(cc->getServerName());
+    break;
+  case ID_MAC_CLIPBOARD:
+    pendingClientClipboard = false;
+    macClipboard->showSettings(cc->getServerName());
+    break;
+#endif
   case ID_INFO:
     fl_message_title(_("VNC connection info"));
     fl_message("%s", fltk_escape(cc->connectionInfo().c_str()).c_str());

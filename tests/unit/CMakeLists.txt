@@ -11,6 +11,16 @@ enable_testing()
 
 include_directories(${CMAKE_SOURCE_DIR}/vncviewer)
 
+add_executable(filetransfercommand filetransfercommand.cxx
+  ../../vncviewer/FileTransferCommand.cxx)
+target_link_libraries(filetransfercommand GTest::gtest_main)
+gtest_discover_tests(filetransfercommand)
+
+add_executable(macclipboardprotocol macclipboardprotocol.cxx
+  ../../vncviewer/MacClipboardProtocol.cxx)
+target_link_libraries(macclipboardprotocol core GTest::gtest_main)
+gtest_discover_tests(macclipboardprotocol)
+
 add_executable(configargs configargs.cxx)
 target_link_libraries(configargs rfb GTest::gtest_main)
 gtest_discover_tests(configargs)
